@@ -7,8 +7,8 @@ RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selectio
 RUN set -xe \
  && apt-get update -qq \
  && apt-get install -y --no-install-recommends \
-        apt-utils bash-completion ca-certificates chrpath net-tools ssh-client \
-        curl wget rsync git vim unzip bzip2
+        apt-utils bash-completion ca-certificates net-tools ssh-client \
+        gcc make chrpath curl wget rsync git vim unzip bzip2
 
 ARG GOSU_VERSION=1.10
 RUN set -xe \
@@ -25,8 +25,8 @@ RUN set -xe \
 ONBUILD ARG _UID
 ONBUILD ARG _GID
 
-ONBUILD RUN groupadd -g $_GID www-data \
- && useradd -g $_GID -u $_UID -s /bin/bash www-data \
+ONBUILD RUN groupmod -g $_GID www-data \
+ && usermod -u $_UID -g $_GID -s /bin/bash www-data \
  && echo "    IdentityFile ~/.ssh/id_rsa" >> /etc/ssh/ssh_config
 
 RUN mkdir -p /var/run/php/ \
@@ -93,10 +93,7 @@ RUN set -xe \
  && apt-get update -qq \
  && apt-get install -y --no-install-recommends supervisor
 
-#COPY supervisor.d/ /etc/supervisor/
-
-#ARG PROJECT
-#RUN sed -i -- "s/<PROJECT>/$PROJECT/g" /etc/supervisor/conf.d/*.conf
+COPY supervisor.d/ /etc/supervisor/
 
 ONBUILD ARG GITHUB_OAUTH_TOKEN
 
@@ -104,15 +101,8 @@ ONBUILD RUN set -xe \
  && cd /opt \
  && curl -sS https://getcomposer.org/installer | php \
  && ln -s /opt/composer.phar /usr/local/bin/composer \
- #&& ln -s /var/www/backend/bin/yii /usr/local/bin/yii \
- #&& ln -s /var/www/backend/bin/build /usr/local/bin/build \
  && gosu www-data composer config -g github-oauth.github.com $GITHUB_OAUTH_TOKEN \
  && gosu www-data composer global require "fxp/composer-asset-plugin:^1.2.0"
-
-ONBUILD ARG _ENV
-
-ONBUILD COPY php.$_ENV.ini /usr/local/etc/php/php.ini
-ONBUILD COPY php-fpm.d/www.conf /usr/local/etc/php-fpm.d/www.conf
 
 RUN rm -rf /var/lib/apt/lists/*
 
