@@ -4,11 +4,24 @@ MAINTAINER Revin Roman <roman@rmrevin.com>
 
 RUN echo 'debconf debconf/frontend select Noninteractive' | debconf-set-selections
 
+ONBUILD ARG _UID
+ONBUILD ARG _GID
+
+ONBUILD RUN groupmod -g $_GID www-data \
+ && usermod -u $_UID -g $_GID -s /bin/bash www-data \
+ && echo "    IdentityFile ~/.ssh/id_rsa" >> /etc/ssh/ssh_config
+
+RUN mkdir -p /var/www/ \
+ && mkdir -p /var/run/php/ \
+ && mkdir -p /var/log/php/ \
+ && mkdir -p /var/log/app/ \
+ && chown www-data:www-data /var/www/
+
 RUN set -xe \
  && apt-get update -qq \
  && apt-get install -y --no-install-recommends \
         apt-utils bash-completion ca-certificates net-tools ssh-client \
-        gcc make chrpath curl wget rsync git vim unzip bzip2
+        gcc make rsync chrpath curl wget rsync git vim unzip bzip2 supervisor
 
 ARG GOSU_VERSION=1.10
 RUN set -xe \
@@ -21,18 +34,6 @@ RUN set -xe \
     && rm -r "$GNUPGHOME" /usr/local/bin/gosu.asc \
     && chmod +x /usr/local/bin/gosu \
     && gosu nobody true
-
-ONBUILD ARG _UID
-ONBUILD ARG _GID
-
-ONBUILD RUN groupmod -g $_GID www-data \
- && usermod -u $_UID -g $_GID -s /bin/bash www-data \
- && echo "    IdentityFile ~/.ssh/id_rsa" >> /etc/ssh/ssh_config
-
-RUN mkdir -p /var/run/php/ \
- && mkdir -p /var/log/php/ \
- && mkdir -p /var/log/app/ \
- && chown www-data:www-data /var/www/
 
 RUN set -xe \
  && apt-key adv --keyserver pgp.mit.edu --recv-keys 5072E1F5 \
@@ -73,7 +74,19 @@ RUN set -xe \
 
 RUN set -xe \
  && apt-get update -qq \
- && apt-get install -y --no-install-recommends geoip-database libgeoip-dev \
+ && apt-get install -y --no-install-recommends libssl-dev \
+ && pecl install mongodb-1.2.0alpha3 \
+ && docker-php-ext-enable mongodb
+
+RUN set -xe \
+ && apt-get update -qq \
+ && apt-get install -y --no-install-recommends libssl-dev libcurl4-openssl-dev libevent-dev \
+ && pecl install event-2.1.0 eio-2.0.1 \
+ && docker-php-ext-enable event eio
+
+RUN set -xe \
+ && apt-get update -qq \
+ && apt-get install -y --no-install-recommends geoip-bin geoip-database libgeoip-dev \
  && pecl install geoip-1.1.1 \
  && docker-php-ext-enable geoip
 
@@ -82,18 +95,6 @@ RUN set -xe \
  && cd /usr/local/share/GeoIP/ \
  && curl -O "http://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz" 2>&1 \
  && gunzip GeoLite2-City.mmdb.gz
-
-RUN set -xe \
- && apt-get update -qq \
- && apt-get install -y --no-install-recommends libssl-dev \
- && pecl install mongodb-1.2.0alpha3 \
- && docker-php-ext-enable mongodb
-
-RUN set -xe \
- && apt-get update -qq \
- && apt-get install -y --no-install-recommends supervisor
-
-COPY supervisor.d/ /etc/supervisor/
 
 ONBUILD ARG GITHUB_OAUTH_TOKEN
 
@@ -104,8 +105,10 @@ ONBUILD RUN set -xe \
  && gosu www-data composer config -g github-oauth.github.com $GITHUB_OAUTH_TOKEN \
  && gosu www-data composer global require "fxp/composer-asset-plugin:^1.2.0"
 
+COPY supervisor.d/ /etc/supervisor/
+
 RUN rm -rf /var/lib/apt/lists/*
 
-CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
-
 WORKDIR /var/www/
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/supervisord.conf"]
