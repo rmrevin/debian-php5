@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [[ -n $1 ]]; then
+    TAG=$1
+else
+    TAG='lastes'
+fi
+
+echo "Begin pushing tag: $TAG"
+
+doc push rmrevin/debian-php5:$TAG

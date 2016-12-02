@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [[ -n $1 ]]; then
+    TAG=$1
+else
+    TAG='lastes'
+fi
+
+doc build --tag rmrevin/debian-php5:$TAG .
+
+echo "Tag: $TAG"
