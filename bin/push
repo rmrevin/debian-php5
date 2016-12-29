@@ -3,7 +3,7 @@
 if [[ -n $1 ]]; then
     TAG=$1
 else
-    TAG='lastes'
+    TAG='latest'
 fi
 
 echo "Begin pushing tag: $TAG"

@@ -3,7 +3,7 @@
 if [[ -n $1 ]]; then
     TAG=$1
 else
-    TAG='lastes'
+    TAG='latest'
 fi
 
 doc build --tag rmrevin/debian-php5:$TAG .
