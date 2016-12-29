@@ -6,6 +6,6 @@ else
     TAG='latest'
 fi
 
-doc build --tag rmrevin/debian-php5:$TAG .
+docker build --tag rmrevin/debian-php5:$TAG .
 
 echo "Tag: $TAG"

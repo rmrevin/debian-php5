@@ -8,4 +8,4 @@ fi
 
 echo "Begin pushing tag: $TAG"
 
-doc push rmrevin/debian-php5:$TAG
+docker push rmrevin/debian-php5:$TAG
